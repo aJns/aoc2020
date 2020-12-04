@@ -30,8 +30,8 @@ fn get_pass_vec() -> Result<Vec<String>, io::Error> {
 struct Password {
     word: String,
     cha: char,
-    min: u32,
-    max: u32,
+    min: usize,
+    max: usize,
 }
 
 fn parse_pass(pass: &str) -> Option<Password> {
@@ -39,35 +39,37 @@ fn parse_pass(pass: &str) -> Option<Password> {
 
     let mut rule = split.next()?.split_whitespace();
 
-    let mut minmax = rule.next();
-    let mut cha = rule.next()?.chars().next()?;
+    let minmax = rule.next();
+    let cha = rule.next()?.chars().next()?;
     assert_eq!(None, rule.next());
 
     let mut mm_i = minmax?.split("-");
 
-    let mut min = match mm_i.next()?.parse() {
+    let min = match mm_i.next()?.parse() {
         Ok(x) => x,
         Err(_) => panic!("asldkfjlasdhf")
     };
-    let mut max = match mm_i.next()?.parse() {
+    let max = match mm_i.next()?.parse() {
         Ok(x) => x,
         Err(_) => panic!("ioaup9q3uur")
     };
     assert_eq!(None, mm_i.next());
 
-    let mut word = split.next()?.to_string();
+    let word = split.next()?.to_string();
     assert_eq!(None, split.next());
 
     return Some(Password { word, cha, min, max });
 }
 
 fn is_valid(pass: &Password) -> bool {
-    println!("\t{}", pass.word);
-    println!("\t{}", pass.cha);
-    println!("\t{}", pass.min);
-    println!("\t{}", pass.max);
+    //println!("\t{}", pass.word);
+    //println!("\t{}", pass.cha);
+    //println!("\t{}", pass.min);
+    //println!("\t{}", pass.max);
 
-    return true;
+    let f: String = pass.word.chars().filter(|x| *x == pass.cha).collect();
+
+    return pass.min <= f.len() && f.len() <= pass.max;
 }
 
 fn main() -> io::Result<()> {
@@ -77,7 +79,6 @@ fn main() -> io::Result<()> {
     let mut counter: i32 = 0;
 
     for pass in pass_vec.iter() {
-        println!("{}", pass);
         let parsed = match parse_pass(pass) {
             Some(x) => x,
             None => panic!("lskdhfoisehf")
