@@ -1,8 +1,5 @@
 use std::io::{self, Read, Write};
 use std::iter::Iterator;
-use std::str::{Lines, FromStr};
-use std::string::ParseError;
-use std::collections::HashMap;
 
 enum Half {
     Upper,
@@ -24,7 +21,7 @@ fn get_half(list: &List, dir: Half) -> List {
 }
 
 fn calc_seat_id(row: u32, col: u32) -> u32 {
-    (row*8 + col)
+    row*8 + col
 }
 
 
@@ -32,7 +29,7 @@ fn main() -> io::Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
 
-    let mut highest_seat_id = 0;
+    let mut remaining_seat_ids: Vec<i64> = (0..127*8+7).collect();
 
     for line in input.lines() {
 
@@ -60,18 +57,24 @@ fn main() -> io::Result<()> {
                 };
             }
         }
-        println!("Row: {}", rows[0]);
-        println!("Col: {}", cols[0]);
 
         let seat_id = calc_seat_id(rows[0], cols[0]);
+        remaining_seat_ids[seat_id as usize] = -1;
+    }
 
-        if highest_seat_id < seat_id {
-            highest_seat_id = seat_id;
+    let mut my_seat = 0;
+
+    let mut prev = 0;
+    for id in remaining_seat_ids {
+        if prev == -1 && id != -1 {
+            my_seat = id;
+            break;
         }
+        prev = id;
     }
 
 
-    writeln!(io::stdout(), "Highest seat ID: {}", highest_seat_id)?;
+    writeln!(io::stdout(), "Your seat ID: {}", my_seat)?;
 
     Ok(())
 }
