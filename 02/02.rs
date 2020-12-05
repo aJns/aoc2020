@@ -62,14 +62,22 @@ fn parse_pass(pass: &str) -> Option<Password> {
 }
 
 fn is_valid(pass: &Password) -> bool {
-    //println!("\t{}", pass.word);
-    //println!("\t{}", pass.cha);
-    //println!("\t{}", pass.min);
-    //println!("\t{}", pass.max);
+    let i1 = pass.min - 1;
+    let i2 = pass.max - 1 - i1 - 1; // .nth() on chars consumes the preceding elements
+    let mut chars = pass.word.chars();
+    let first = match chars.nth(i1) {
+        Some(x) => x == pass.cha,
+        None => false
+    };
+    let second = match chars.nth(i2) {
+        Some(x) => x == pass.cha,
+        None => false
+    };
 
-    let f: String = pass.word.chars().filter(|x| *x == pass.cha).collect();
+    let or = first || second;
+    let and = first && second;
 
-    return pass.min <= f.len() && f.len() <= pass.max;
+    return or && !and;
 }
 
 fn main() -> io::Result<()> {
