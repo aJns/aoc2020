@@ -38,59 +38,49 @@ fn main() -> io::Result<()> {
     let input_vec = get_input_lines()?;
     let map_table = get_map_table(input_vec);
 
-    let mut counter: i32 = 0;
+    let mut mult_counter: i32 = 1;
 
-    let mut i = map_table.iter();
-    i.next();   // first row not needed
+    let slopes = vec![(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)];
 
-    let x_add = 3;
-    let y_add = 1;
+    for s in slopes {
+        let mut counter: i32 = 0;
 
-    let mut x_i = x_add;
+        let mut i = map_table.iter();
+        i.next();   // first row not needed
 
-    loop {
-        let row = match i.nth(y_add-1) {
-            Some(x) => x,
-            None    => break
-        };
+        let x_add = s.0;
+        let y_add = s.1;
 
-        let len = row.len();
+        let mut x_i = x_add;
 
-        x_i = match x_i < len {
-            true    => x_i,
-            false   => x_i - len
-        };
+        loop {
+            let row = match i.nth(y_add-1) {
+                Some(x) => x,
+                None    => break
+            };
 
-        let is_tree = row[x_i] == '#';
+            let len = row.len();
 
-        counter += match is_tree {
-            true    => 1,
-            false   => 0
-        };
+            x_i = match x_i < len {
+                true    => x_i,
+                false   => x_i - len
+            };
 
-        let m = match is_tree {
-            true    => 'X',
-            false   => 'O'
-        };
+            let is_tree = row[x_i] == '#';
 
-        let mut i = 0;
-        for c in row {
-            if i == x_i {
-                print!("{}", m);
-            }
-            else
-            {
-            print!("{}", c);
-            }
-            i += 1;
+            counter += match is_tree {
+                true    => 1,
+                false   => 0
+            };
+
+            x_i += x_add
         }
-        println!("");
 
-        x_i += x_add
+        mult_counter *= counter;
     }
 
 
-    writeln!(io::stdout(), "We hit {} trees", counter)?;
+    writeln!(io::stdout(), "Tree hit mult {}", mult_counter)?;
 
     Ok(())
 }
