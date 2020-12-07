@@ -49,6 +49,24 @@ fn print_rule_map(map: &RuleMap) {
     }
 }
 
+fn count_bags(rules: &RuleMap, bag: &str) -> u32 {
+    if let Some(map) = rules.get(bag) {
+        let mut count = 1;
+
+        for (k, v) in map {
+            let mult: u32 = match v {
+                0 => 1,
+                _ => *v
+            };
+            count += mult*count_bags(rules, k);
+        }
+        println!("\"{}\" has {} bags inside", bag, count);
+        count
+    } else {
+        1
+    }
+}
+
 
 fn main() -> io::Result<()> {
     let mut input = String::new();
@@ -57,8 +75,6 @@ fn main() -> io::Result<()> {
     lazy_static! {
         static ref GOLD: Regex = Regex::new(r"shiny gold").unwrap();
     }
-
-    let mut color_count = 0;
 
     let temp = input.split(".").map(|x| parse_rule(x.trim()));
     let mut rules: RuleMap = HashMap::new();
@@ -69,51 +85,8 @@ fn main() -> io::Result<()> {
         }
     }
 
-    // remove empty bags
-    let mut remove: HashSet<String> = HashSet::new();
-    for (k, v) in &rules {
-        if v.is_empty() {
-            remove.insert(k.to_string());
-        }
-    }
 
-    for r in &remove {
-        rules.remove(r);
-    }
-
-    remove.clear();
-
-
-    // Start with shiny gold in containers
-    let mut containers: HashSet<String> = HashSet::new();
-    containers.insert("shiny gold".to_string());
-
-    while !rules.is_empty() {
-        // remove containers; We dont wanna check those
-        for c in &containers {
-            rules.remove(c);
-        }
-
-        let mut ins = false;
-        // add containers to set
-        for (key, val) in &rules {
-            for (k, _) in val {
-                if containers.contains(k) {
-                    containers.insert(key.clone());
-                    ins = true;
-                }
-            }
-        }
-
-        if !ins {
-            break;
-        }
-    }
-
-    color_count = containers.len() -1;
-
-
-    writeln!(io::stdout(), "{} colors can contain a shiny gold bag", color_count)?;
+    writeln!(io::stdout(), "{} bags required", count_bags(&rules, "shiny gold")-1)?;
 
     Ok(())
 }
