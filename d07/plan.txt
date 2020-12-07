@@ -1,0 +1,5 @@
+1. Käy läpi säännöt ja luo niistä joku järkevä tietorakenne. Mappeja varmaan
+2. Laukkujen sisältösäännöistä jonkunlainen puurakenne ehkä
+    2.1 Luodaan kaikille laukuille puu, jossa juurena laukku itse, oksina laukut joihin laukku voi mennä
+        (referenssinä, jotta puu päivittyy)
+3. Sitten Settiin laukut jotka tulee sisällysketjussa vastaan
