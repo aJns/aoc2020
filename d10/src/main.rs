@@ -10,30 +10,23 @@ fn fact(num: u128) -> u128 {
    }
 }
 
-fn perm(n: u128, r:  u128) -> u128 {
+fn comb(n: u128, r:  u128) -> u128 {
    let nom = fact(n);
-   let denom = fact(n-r);
+   let denom = fact(r)*fact(n-r);
 
    nom/denom
 }
 
-fn calc_perms(n: u128) -> u128 {
-   let mut perms = 0;
+fn calc_combs(n: u128, min: u128) -> u128 {
+   let mut combs = 0;
 
-   for r in 0..n+1 {
-      let c = perm(n, r);
-      perms += c;
+   for r in min..n+1 {
+      let c = comb(n, r);
+      combs += c;
       println!("r/n: {}/{} : permutations: {}", r, n, c);
    }
 
-   let ret = match perms {
-      0 => 0,
-      1 => 0,
-      x => x
-   };
-
-   println!("ret comb: {}", ret);
-   ret
+   combs
 }
 
 fn find_diff1_streaks(input: &[u64]) -> Vec<Vec<u64>> {
@@ -82,7 +75,7 @@ fn main() -> io::Result<()> {
 
     let streaks = find_diff1_streaks(&sorted);
 
-    let mut total_perms = 1;
+    let mut total_combs = 1;
 
     for s in streaks {
         println!("streak");
@@ -90,13 +83,16 @@ fn main() -> io::Result<()> {
             println!("\t{}", i);
         }
 
-        let perms = calc_perms(s.len() as u128);
-        total_perms *= perms;
+        let n = s.len() as u128;
+        let min = n/3 as u128;
 
-        println!("permutations: {}", perms);
+        let combs = calc_combs(n, min);
+        total_combs *= combs;
+
+        println!("combinations: {}", combs);
     }
 
-    writeln!(io::stdout(), "total perms: {}", total_perms)?;
+    writeln!(io::stdout(), "total combs: {}", total_combs)?;
 
     Ok(())
 }
