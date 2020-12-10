@@ -82,6 +82,8 @@ fn main() -> io::Result<()> {
 
     let streaks = find_diff1_streaks(&sorted);
 
+    let mut total_perms = 1;
+
     for s in streaks {
         println!("streak");
         for i in &s {
@@ -89,11 +91,12 @@ fn main() -> io::Result<()> {
         }
 
         let perms = calc_perms(s.len() as u128);
+        total_perms *= perms;
 
         println!("permutations: {}", perms);
     }
 
-    writeln!(io::stdout(), "hi")?;
+    writeln!(io::stdout(), "total perms: {}", total_perms)?;
 
     Ok(())
 }
