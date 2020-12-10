@@ -1,7 +1,60 @@
-use std::collections::HashSet;
 use std::io::{self, Read, Write};
 use std::string::String;
 
+fn fact(num: u128) -> u128 {
+   match num {
+      0 => 1,
+      1 => 1,
+      _ => fact(num-1)*num,
+   }
+}
+
+fn comb(n: u128, r:  u128) -> u128 {
+   let nom = fact(n);
+   let denom = fact(r)*fact(n-r);
+
+   nom/denom
+}
+
+fn calc_combs(n: u128, min: u128) -> u128 {
+   let mut combs = 0;
+
+   for r in min..n+1 {
+      let c = comb(n, r);
+      combs += c;
+      println!("r/n: {}/{} : combinations: {}", r, n, c);
+   }
+
+   combs
+}
+
+fn find_diff1_streaks(input: &[u64]) -> Vec<Vec<u64>> {
+    let mut streaks: Vec<Vec<u64>> = Vec::new();
+
+    let mut start = 0;
+    let mut in_streak = false;
+
+    for i in 1..input.len()-1 {
+        let n_dist = input[i+1] - input[i];
+        let p_dist = input[i] - input[i-1];
+        let dist_sum = n_dist + p_dist;
+
+        if dist_sum <= 3 {
+            if !in_streak {
+                in_streak = true;
+                start = i;
+            }
+        } else {
+            if in_streak {
+                in_streak = false;
+                let streak = &input[start..i];
+                streaks.push(Vec::from(streak));
+            }
+        }
+    }
+
+    streaks
+}
 
 fn main() -> io::Result<()> {
     let mut input = String::new();
@@ -15,22 +68,26 @@ fn main() -> io::Result<()> {
     sorted.sort();
     sorted.push(sorted.last().unwrap()+3);
 
-    let mut diff1 = 0;
-    let mut diff3 = 0;
+    let streaks = find_diff1_streaks(&sorted);
 
-    for i in 1..sorted.len() {
-        let diff = sorted[i] - sorted[i-1];
+    let mut total_combs = 1;
 
-        match diff {
-            1 => diff1 += 1,
-            3 => diff3 += 1,
-            _ => (),
+    for s in streaks {
+        println!("streak");
+        for i in &s {
+            println!("\t{}", i);
         }
+
+        let n = s.len() as u128;
+        let min = n/3 as u128;
+
+        let combs = calc_combs(n, min);
+        total_combs *= combs;
+
+        println!("combinations: {}", combs);
     }
 
-    let mult = diff1*diff3;
-
-    writeln!(io::stdout(), "diffs, 1: {}, 3: {}. mult: {}", diff1, diff3, mult)?;
+    writeln!(io::stdout(), "total combs: {}", total_combs)?;
 
     Ok(())
 }
