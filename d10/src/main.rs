@@ -2,6 +2,71 @@ use std::collections::HashSet;
 use std::io::{self, Read, Write};
 use std::string::String;
 
+fn fact(num: u128) -> u128 {
+   match num {
+      0 => 1,
+      1 => 1,
+      _ => fact(num-1)*num,
+   }
+}
+
+fn perm(n: u128, r:  u128) -> u128 {
+   let nom = fact(n);
+   let denom = fact(n-r);
+
+   nom/denom
+}
+
+fn calc_perms(n: u128) -> u128 {
+   let mut perms = 0;
+
+   for r in 0..n+1 {
+      let c = perm(n, r);
+      perms += c;
+      println!("r/n: {}/{} : permutations: {}", r, n, c);
+   }
+
+   let ret = match perms {
+      0 => 0,
+      1 => 0,
+      x => x
+   };
+
+   println!("ret comb: {}", ret);
+   ret
+}
+
+fn find_diff1_streaks(input: &[u64]) -> Vec<Vec<u64>> {
+    let mut p_dist = input[1] - input[0];
+
+    let mut streaks: Vec<Vec<u64>> = Vec::new();
+
+    let mut start = 0;
+    let mut end = 0;
+    let mut in_streak = false;
+
+    for i in 1..input.len()-1 {
+        let n_dist = input[i+1] - input[i];
+        let p_dist = input[i] - input[i-1];
+        let dist_sum = n_dist + p_dist;
+
+        if dist_sum <= 3 {
+            if !in_streak {
+                in_streak = true;
+                start = i;
+            }
+        } else {
+            if in_streak {
+                in_streak = false;
+                end = i-1;
+                let streak = &input[start..end+1];
+                streaks.push(Vec::from(streak));
+            }
+        }
+    }
+
+    streaks
+}
 
 fn main() -> io::Result<()> {
     let mut input = String::new();
@@ -15,22 +80,20 @@ fn main() -> io::Result<()> {
     sorted.sort();
     sorted.push(sorted.last().unwrap()+3);
 
-    let mut diff1 = 0;
-    let mut diff3 = 0;
+    let streaks = find_diff1_streaks(&sorted);
 
-    for i in 1..sorted.len() {
-        let diff = sorted[i] - sorted[i-1];
-
-        match diff {
-            1 => diff1 += 1,
-            3 => diff3 += 1,
-            _ => (),
+    for s in streaks {
+        println!("streak");
+        for i in &s {
+            println!("\t{}", i);
         }
+
+        let perms = calc_perms(s.len() as u128);
+
+        println!("permutations: {}", perms);
     }
 
-    let mult = diff1*diff3;
-
-    writeln!(io::stdout(), "diffs, 1: {}, 3: {}. mult: {}", diff1, diff3, mult)?;
+    writeln!(io::stdout(), "hi")?;
 
     Ok(())
 }
