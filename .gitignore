@@ -2,3 +2,6 @@
 tags
 
 target/
+
+# for debug output
+out.txt
