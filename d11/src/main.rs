@@ -50,45 +50,114 @@ fn parse_to_cells(lines: &[&str]) -> CellMatrix {
    outer
 }
 
-fn count_neighbors(cells: &CellMatrix, ij: (usize, usize)) -> u8 {
+fn index_occ(cells: &CellMatrix, ij: (i64, i64), count: &mut u8) -> bool {
+   let i = ij.0 as usize;
+   let j = ij.1 as usize;
 
-   let mut i_arr = Vec::new();
-   let mut j_arr = Vec::new();
+   match cells[i][j] {
+      State::Floor    => false,
+      State::Free     => true,
+      State::Occupied => { *count += 1; true },
+   }
+}
 
-   // This is dumb
-   if ij.0 > 0 {
-      i_arr.push(ij.0-1);
-   }
-   if ij.0 < cells.len()-1 {
-      i_arr.push(ij.0+1);
-   }
-   i_arr.push(ij.0);
-   
-   if ij.1 > 0 {
-      j_arr.push(ij.1-1);
-   }
-   if ij.1 < cells[0].len()-1 {
-      j_arr.push(ij.1+1);
-   }
-   j_arr.push(ij.1);
+fn count_neighbors(cells: &CellMatrix, index: (usize, usize)) -> u8 {
+   // This seems really dumb, but I'm too lazy and tired to do it better
+
+   let row_n = cells.len();
+   let col_n = cells[0].len();
+
+   let bounded = |xy: (i64, i64)| {
+      let row_ok = xy.0 >= 0 && xy.0 < row_n as i64;
+      let col_ok = xy.1 >= 0 && xy.1 < col_n as i64;
+
+      return row_ok && col_ok
+   };
    
    let mut count = 0;
+   let mut ij = (0,0);
 
-   for i in &i_arr {
-      for j in &j_arr {
+   // rows
+   ij.0 = 1 + index.0 as i64;
+   ij.1 = index.1 as i64;
 
-         if (*i, *j) == ij {
-            continue;
-         }
-
-         let neighbor = &cells[*i][*j];
-         if *neighbor == State::Occupied {
-            count += 1;
-         }
+   while bounded(ij) {
+      if index_occ(cells, ij, &mut count) {
+         break;
       }
+      ij = (ij.0+1, ij.1);
+   }
+   ij.0 = -1 + index.0 as i64;
+
+   while bounded(ij) {
+      if index_occ(cells, ij, &mut count) {
+         break;
+      }
+      ij = (ij.0-1, ij.1);
    }
 
-//   print!("{}\t\t", count);
+   // cols
+   ij.0 = index.0 as i64;
+   ij.1 = 1 + index.1 as i64;
+
+   while bounded(ij) {
+      if index_occ(cells, ij, &mut count) {
+         break;
+      }
+      ij = (ij.0, ij.1+1);
+   }
+   ij.1 = -1 + index.1 as i64;
+
+   while bounded(ij) {
+      if index_occ(cells, ij, &mut count) {
+         break;
+      }
+      ij = (ij.0, ij.1-1);
+   }
+
+   // diags
+   ij.0 = 1+index.0 as i64;
+   ij.1 = 1+index.1 as i64;
+
+   while bounded(ij) {
+      if index_occ(cells, ij, &mut count) {
+         break;
+      }
+      ij = (ij.0+1, ij.1+1);
+   }
+
+   ij.0 = -1+index.0 as i64;
+   ij.1 = -1+index.1 as i64;
+
+   while bounded(ij) {
+      if index_occ(cells, ij, &mut count) {
+         break;
+      }
+      ij = (ij.0-1, ij.1-1);
+   }
+
+   ij.0 = 1+index.0 as i64;
+   ij.1 = -1+index.1 as i64;
+
+   while bounded(ij) {
+      if index_occ(cells, ij, &mut count) {
+         break;
+      }
+      ij = (ij.0+1, ij.1-1);
+   }
+
+   ij.0 = -1+index.0 as i64;
+   ij.1 = 1+index.1 as i64;
+
+   while bounded(ij) {
+      if index_occ(cells, ij, &mut count) {
+         break;
+      }
+      ij = (ij.0-1, ij.1+1);
+   }
+
+
+   // print!("{}", count);
 
    count
 }
@@ -107,7 +176,7 @@ fn new_state(old: &State, n_count: u8) -> State {
 
    let occ = |n| {
       match n {
-         0..=3 => State::Occupied,
+         0..=4 => State::Occupied,
          _     => State::Free
       }
    };
@@ -160,6 +229,7 @@ fn main() -> io::Result<()> {
             let new = new_state(c, n_count);
             new_world[i][j] = new;
          }
+         print!("\t");
          for j in 0..cols {
             let c = &old_world[i][j];
             print!("{}", c);
