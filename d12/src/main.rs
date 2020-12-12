@@ -12,6 +12,16 @@ enum Cardinal {
    E
 }
 
+fn restrict_deg(mut deg: i32) -> i32 {
+      if deg < 0 {
+         deg += 360;
+      }
+      if deg >= 360 {
+         deg -= 360;
+      }
+      deg
+}
+
 impl Cardinal {
    fn to_deg(self) -> i32 {
       match self {
@@ -23,7 +33,8 @@ impl Cardinal {
    }
 
    fn from_deg(deg: i32) -> Self {
-      match deg {
+
+      match restrict_deg(deg) {
          0   => Cardinal::N,
          180 => Cardinal::S,
          270 => Cardinal::W,
@@ -95,15 +106,15 @@ impl From<&str> for Command {
 
 struct Ship {
    pos: Coord,
-   dir: Cardinal
+   wpt: Coord
 }
 
 fn calc_f_coord(dir: Cardinal, val: i32) -> Coord {
    match dir {
-         Cardinal::N => (0, -val),
-         Cardinal::S => (0, val),
-         Cardinal::E => (val, 0),
-         Cardinal::W => (-val, 0),
+      Cardinal::N => (0, -val),
+      Cardinal::S => (0, val),
+      Cardinal::E => (val, 0),
+      Cardinal::W => (-val, 0),
    }
 }
 
@@ -112,42 +123,65 @@ fn calc_new_dir(old: Cardinal, deg: i32) -> Cardinal {
 
    let mut new_deg = old_deg + deg;
 
-   if new_deg < 0 {
-      new_deg += 360;
-   }
-   if new_deg >= 360 {
-      new_deg -= 360;
-   }
-
    println!("new deg: {}", new_deg);
 
    Cardinal::from_deg(new_deg)
 }
 
+fn move_to_wpt(old: Coord, wpt: Coord, times: i32) -> Coord {
+   let mut new = old;
+
+   for _ in 0..times {
+      new.0 += wpt.0;
+      new.1 += wpt.1;
+   }
+
+   new
+}
+
+fn rotate_wpt(old: Coord, deg: i32) -> Coord {
+   print!("Rotating {},{} by {} degrees: ", old.0, old.1, deg);
+   let ret = match restrict_deg(deg) {
+      0     => old,
+
+      90    => (-old.1, old.0),
+      180   => (-old.0, -old.1),
+      270   => (old.1, -old.0),
+
+      _     => panic!("cant handle deg")
+   };
+
+   println!("{},{}", ret.0, ret.1);
+
+   ret
+}
+
 impl Ship {
    fn new() -> Ship {
-      Ship { pos: (0,0), dir: Cardinal::E }
+      Ship { pos: (0,0), wpt: (10,-1) }
    }
 
    fn exec_cmd(&self, cmd: Command) -> Self {
-      let add_c = match cmd.act {
-         Action::N  => (0, -cmd.val),
-         Action::S  => (0, cmd.val),
-         Action::E  => (cmd.val, 0),
-         Action::W  => (-cmd.val, 0),
-         Action::F  => calc_f_coord(self.dir, cmd.val),
-         _          => (0,0)
-      };
-      let dir = match cmd.act {
-         Action::L  => calc_new_dir(self.dir, -cmd.val),
-         Action::R  => calc_new_dir(self.dir, cmd.val),
-         _          => self.dir
-
+      let add_wpt = match cmd.act {
+         Action:: N => (0, -cmd.val),
+         Action:: S => (0, cmd.val),
+         Action:: E => (cmd.val, 0),
+         Action:: W => (-cmd.val, 0),
+         _          => (0, 0)
       };
 
-      let pos = (self.pos.0 + add_c.0, self.pos.1 + add_c.1);
+      let wpt = match cmd.act {
+         Action:: L => rotate_wpt(self.wpt, -cmd.val),
+         Action:: R => rotate_wpt(self.wpt, cmd.val),
+         _          => (self.wpt.0 + add_wpt.0, self.wpt.1 + add_wpt.1)
+      };
 
-      Ship { pos, dir }
+      let pos = match cmd.act {
+         Action::F  => move_to_wpt(self.pos, wpt, cmd.val),
+         _          => self.pos
+      };
+
+      Ship { pos, wpt }
    }
 
    fn manhattan(&self) -> i32 {
@@ -157,13 +191,7 @@ impl Ship {
 
 impl fmt::Display for Ship {
    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-      let dir = match self.dir {
-         Cardinal::N => 'N',
-         Cardinal::S => 'S',
-         Cardinal::E => 'E',
-         Cardinal::W => 'W',
-      };
-      write!(f, "pos: {},{}  dir: {}", self.pos.0, self.pos.1, dir)
+      write!(f, "pos: {},{}  wpt: {},{}", self.pos.0, self.pos.1, self.wpt.0, self.wpt.1)
    }
 }
 
@@ -176,12 +204,12 @@ fn main() -> io::Result<()> {
 
    let cmds = input.lines().map(|x| Command::from(x));
 
+   println!("Ship state: {}", ship);
    for c in cmds {
       println!("action: {}, value: {}", c.act, c.val);
-      println!("Ship state: {}", ship);
       ship = ship.exec_cmd(c);
+      println!("Ship state: {}", ship);
    }
-   println!("Ship state: {}", ship);
 
 
    writeln!(io::stdout(), "Final manhattan: {}", ship.manhattan())?;
