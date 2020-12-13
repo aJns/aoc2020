@@ -1,54 +1,66 @@
 use std::io::{self, Read, Write};
 use std::string::String;
-use std::fmt;
 
-
-fn parse_id(id: &str) -> i32 {
-   match id.parse::<i32>() {
-      Ok(x)     => x,
-      Err(_)    => 0
-   }
+fn parse_id(id: &str) -> u128 {
+    match id.parse::<u128>() {
+        Ok(x) => x,
+        Err(_) => 0,
+    }
 }
 
-fn calc_waiting_time(arrival: i32, bus_id: i32) -> i32 {
-   if arrival < bus_id {
-      return bus_id - arrival
-   }
+fn gcd(a: u128, b: u128) -> u128 {
+    if b == 0 {
+        return a;
+    }
+    gcd(b, a % b)
+}
 
-   let times = (arrival / bus_id) + 1;
-   times*bus_id - arrival
+fn lcm(a: u128, b: u128) -> u128 {
+    (a * b) / gcd(a, b)
+}
+
+fn find_sequence(prev_t: u128, prev_lcm: u128, remain: &[u128]) -> u128 {
+    println!(
+        "prev_t: {}, prev_lcm: {}, remaining ids: {}",
+        prev_t,
+        prev_lcm,
+        remain.len()
+    );
+    if remain.is_empty() {
+        return prev_t;
+    }
+    let curr = remain[0];
+    if curr == 0 {
+        return find_sequence(prev_t + 1, prev_lcm, &remain[1..]);
+    }
+
+    let mut n = 0;
+    let next_t;
+    loop {
+        let test = prev_t + n * prev_lcm + 1;
+        if test % curr == 0 {
+            next_t = test;
+            break;
+        }
+        n += 1;
+    }
+    let next_lcm = lcm(prev_lcm, curr);
+    return find_sequence(next_t, next_lcm, &remain[1..]);
 }
 
 fn main() -> io::Result<()> {
-   let mut input = String::new();
-   io::stdin().read_to_string(&mut input)?;
+    let mut input = String::new();
+    io::stdin().read_to_string(&mut input)?;
 
+    let lines: Vec<&str> = input.lines().collect();
 
-   let lines: Vec<&str> = input.lines().collect();
+    let bus_ids: Vec<u128> = lines[1].split(',').map(|x| parse_id(x)).collect();
 
-   let timestamp: i32 = lines[0].parse().unwrap();
+    let minus = (bus_ids.len() as u128) - 1;
 
-   let bus_ids: Vec<i32> = lines[1].split(',').map(|x| parse_id(x)).collect();
+    let earliest = find_sequence(0, 1, &bus_ids) - minus;
 
-   let mut earliest = (0, 1_000_000_000);  // id, wait
+    writeln!(io::stdout(), "earliest sequence start: {}", earliest)?;
 
-   for id in bus_ids {
-      if id == 0 {
-         continue;
-      }
-
-      let wait = calc_waiting_time(timestamp, id);
-
-      if wait < earliest.1  {
-         earliest = (id, wait);
-      }
-   }
-
-   let mult = earliest.0 * earliest.1;
-
-   writeln!(io::stdout(), "id: {}, waiting time: {}. multiplied: {}",
-      earliest.0, earliest.1, mult)?;
-
-   Ok(())
+    Ok(())
 }
-
