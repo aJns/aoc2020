@@ -1,4 +1,5 @@
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate lazy_static;
 extern crate regex;
 
 use std::io::{self, Read, Write};
@@ -24,22 +25,16 @@ fn to_dec(bin: &Binary) -> u64 {
     acc
 }
 
-fn parse_bitmask(line: &str) -> Binary {
-    let split: Vec<&str> = line.split(" = ").collect();
-
-    to_binary(split[1])
-}
-
 #[derive(PartialEq)]
 enum Op {
     Mask,
-    Save
+    Save,
 }
 
 struct MemCmd {
     op: Op,
     i: usize,
-    bin: Binary
+    bin: Binary,
 }
 
 fn dec2bin(dec: u64) -> Binary {
@@ -58,35 +53,64 @@ fn parse_cmd(line: &str) -> MemCmd {
 
     if op == "mask" {
         let val = to_binary(&VAL.captures(line).unwrap()[1]);
-        MemCmd { op: Op::Mask, i: 0, bin: val }
+        MemCmd {
+            op: Op::Mask,
+            i: 0,
+            bin: val,
+        }
     } else {
-
-    let index: usize = IN.captures(line).unwrap()[1].parse().unwrap();
-    let val = dec2bin(VAL.captures(line).unwrap()[1].parse().unwrap());
-    MemCmd { op: Op::Save, i: index, bin: val }
+        let index: usize = IN.captures(line).unwrap()[1].parse().unwrap();
+        let val = dec2bin(VAL.captures(line).unwrap()[1].parse().unwrap());
+        MemCmd {
+            op: Op::Save,
+            i: index,
+            bin: val,
+        }
     }
 }
 
-fn apply_mask(val: &Binary, mask: &Binary) -> Binary {
-    let mut ret = val.clone();
-    for i in 0..mask.len() {
-        let x = mask[i];
+fn apply_mask(val: &Binary, mask: &Binary) -> Vec<Binary> {
+    let mut ret: Vec<Binary> = Vec::new();
+    ret.push(Vec::new());
 
-        match x {
-            '0' => ret[i] = x,
-            '1' => ret[i] = x,
-            _   => ()
-        };
+    for i in 0..mask.len() {
+        let m = mask[i];
+        if m == 'X' {
+            let mut ret_cp = ret.clone();
+
+            for r in &mut ret {
+                r.push('0');
+            }
+            for r in &mut ret_cp {
+                r.push('1');
+            }
+
+            ret.append(&mut ret_cp);
+        } else {
+            for r in &mut ret {
+                match m {
+                    '0' => r.push(val[i]),
+                    '1' => r.push('1'),
+                    _ => panic!("wrong val"),
+                }
+            }
+        }
     }
     ret
 }
 
 fn run_prog(mem: &mut HashMap<usize, u64>, cmds: &[MemCmd]) {
-    let mut mask = vec!['X'];
+    let mut mask: Binary = Vec::new();
     for c in cmds {
         match c.op {
             Op::Mask => mask = c.bin.clone(),
-            Op::Save => {mem.insert(c.i, to_dec(&apply_mask(&c.bin, &mask)));},
+            Op::Save => {
+                for mskd in apply_mask(&dec2bin(c.i as u64), &mask) {
+                    let index = to_dec(&mskd) as usize;
+                    let dec = to_dec(&c.bin);
+                    mem.insert(index, dec);
+                }
+            }
         }
     }
 }
@@ -101,9 +125,9 @@ fn main() -> io::Result<()> {
 
     for c in &cmds {
         if c.op == Op::Save {
-            print!("{:<7} = ", to_dec(&c.bin));
+            print!("{:<10} = ", to_dec(&c.bin));
         } else {
-            print!("bitmask = ");
+            print!("{:<10} = ", "bitmask");
         }
         for b in &c.bin {
             print!("{}", b);
