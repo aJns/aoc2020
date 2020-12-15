@@ -1,61 +1,44 @@
+use std::env::args;
 use std::io::{self, Read, Write};
 use std::string::String;
 
-use std::collections::HashMap;
-
-fn calc_turn_diff(turns: &[u32]) -> u32 {
-    let last_i = turns.len() - 1;
-    let second_i = last_i - 1;
-
-    let last = turns[last_i];
-    let second = turns[second_i];
-
-    let diff = last - second;
-
-    // for t in turns {
-    //     println!("\tSaid on turns: {}", t);
-    // }
-
-    // println!("\tLast: {}, Sec2last: {}, Diff: {}", last, second, diff);
-
-    diff
-}
-
-fn play_game(start: &Vec<u32>) -> u32 {
+fn play_game(start: &Vec<usize>, end: usize) -> usize {
     let mut turn = 0;
     let mut prev = 0;
 
-    let mut turn_spoken = HashMap::new();
+    let mut turn_spoken = vec![0; 30e6 as usize];
 
     for s in start {
         turn += 1;
         prev = *s;
 
         // println!("Turn: {}, Starting number: {}", turn, prev);
-        turn_spoken.insert(prev, vec![turn]);
+        turn_spoken[prev] = turn;
     }
 
-    while turn < 30000000 {
-        turn += 1;
-        let turns = &turn_spoken.get(&prev).unwrap();
+    let mut pp_turn = 0;
+    let mut pp_val = 0;
 
-        if turns.len() == 1 {
+    while turn < end {
+        let prev_turn = turn_spoken[prev];
+
+        // print!("Last: {}, turn: {}, prev_turn: {}\t", prev, turn, prev_turn);
+
+        if prev_turn == 0 {
             prev = 0;
         } else {
-            prev = calc_turn_diff(turns);
-        }
-        if turn % 300_000 == 0 {
-            println!("Turn: {}, number: {}", turn, prev);
+            prev = turn - prev_turn;
         }
 
-        let mut new_turns;
-        if turn_spoken.contains_key(&prev) {
-            new_turns = turn_spoken.get(&prev).unwrap().clone();
-        } else {
-            new_turns = Vec::new();
+        if pp_turn != 0 {
+            turn_spoken[pp_val] = pp_turn;
         }
-        new_turns.push(turn);
-        turn_spoken.insert(prev, new_turns);
+
+        turn += 1;
+        pp_turn = turn;
+        pp_val = prev;
+
+        // println!("Turn: {}, number: {}", turn, prev);
     }
 
     prev
@@ -67,11 +50,18 @@ fn main() -> io::Result<()> {
 
     let lines: Vec<&str> = input.lines().collect();
 
+    let mut args = args();
+    args.next();
+    let end = match args.next() {
+        Some(x) => x.parse().unwrap(),
+        None => 10,
+    };
+
     for line in lines {
-        let nums: Vec<u32> = line.split(",").map(|x| x.parse().unwrap()).collect();
-        let result = play_game(&nums);
+        let nums: Vec<usize> = line.split(",").map(|x| x.parse().unwrap()).collect();
+        let result = play_game(&nums, end);
         write!(io::stdout(), "input: {:<17}", line)?;
-        writeln!(io::stdout(), "30000000th number: {}", result)?;
+        writeln!(io::stdout(), "{}th number: {}", end, result)?;
     }
 
     Ok(())
