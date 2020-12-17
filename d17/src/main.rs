@@ -38,21 +38,25 @@ impl fmt::Display for Cell {
     }
 }
 
-const WS: usize = 32;
+const WS: usize = 25;
 const MID: usize = WS / 2;
-type World = [[[Cell; WS]; WS]; WS];
+type World = [[[[Cell; WS]; WS]; WS]; WS];
 
 fn visualize_world(world: &World) {
     let x_len = world.len();
     let y_len = world[0].len();
     let z_len = world[0][0].len();
+    let w_len = world[0][0][0].len();
 
     for z in 0..z_len {
         println!("z={}", (z as i32) - (MID as i32));
         println!("----------------------");
         for x in 0..x_len {
             for y in 0..y_len {
-                print!("{}", world[x][y][z]);
+                for w in 0..w_len {
+                    print!("{}", world[x][y][z][w]);
+                }
+                println!("");
             }
             println!("");
         }
@@ -65,7 +69,7 @@ fn init_world(world: &mut World, lines: str::Lines) {
     for line in lines {
         let mut y = MID;
         for c in line.chars() {
-            world[x][y][MID] = Cell::from(c);
+            world[x][y][MID][MID] = Cell::from(c);
             y += 1;
         }
         x += 1;
@@ -77,8 +81,10 @@ fn count_actives(world: &World) -> u32 {
     for x in 0..WS {
         for y in 0..WS {
             for z in 0..WS {
-                if world[x][y][z].state == State::Alive {
-                    count += 1;
+                for w in 0..WS {
+                    if world[x][y][z][w].state == State::Alive {
+                        count += 1;
+                    }
                 }
             }
         }
@@ -87,23 +93,26 @@ fn count_actives(world: &World) -> u32 {
     count
 }
 
-fn count_neighbours(world: &World, indices: (usize, usize, usize)) -> u8 {
-    let (x, y, z) = indices;
+fn count_neighbours(world: &World, indices: (usize, usize, usize, usize)) -> u8 {
+    let (x, y, z, w) = indices;
     let i_max = WS - 1;
     let mut count = 0;
 
     let x_min = max((x as i64) - 1, 0) as usize;
     let y_min = max((y as i64) - 1, 0) as usize;
     let z_min = max((z as i64) - 1, 0) as usize;
+    let w_min = max((w as i64) - 1, 0) as usize;
 
     for i in x_min..=min(x + 1, i_max) {
         for j in y_min..=min(y + 1, i_max) {
             for k in z_min..=min(z + 1, i_max) {
-                if (i, j, k) == (x, y, z) {
-                    continue;
-                }
-                if world[i][j][k].state == State::Alive {
-                    count += 1;
+                for h in w_min..=min(w + 1, i_max) {
+                    if (i, j, k, h) == (x, y, z, w) {
+                        continue;
+                    }
+                    if world[i][j][k][h].state == State::Alive {
+                        count += 1;
+                    }
                 }
                 // println!("\t{},{},{}", i, j, k);
             }
@@ -120,24 +129,34 @@ fn run_cycle(world: &World) -> World {
     for x in 0..WS {
         for y in 0..WS {
             for z in 0..WS {
-                let cube = world[x][y][z];
-                let nc = count_neighbours(world, (x, y, z));
+                for w in 0..WS {
+                    let cube = world[x][y][z][w];
+                    let nc = count_neighbours(world, (x, y, z, w));
 
-                let state = match cube.state {
-                    State::Alive => match nc {
-                        2..=3 => State::Alive,
-                        _ => State::Dead,
-                    },
-                    State::Dead => match nc {
-                        3 => State::Alive,
-                        _ => State::Dead,
-                    },
-                };
-                new[x][y][z] = Cell { state };
+                    let state = match cube.state {
+                        State::Alive => match nc {
+                            2..=3 => State::Alive,
+                            _ => State::Dead,
+                        },
+                        State::Dead => match nc {
+                            3 => State::Alive,
+                            _ => State::Dead,
+                        },
+                    };
+                    new[x][y][z][w] = Cell { state };
 
-                if cube.state == State::Alive {
-                    if x == 0 || y == 0 || z == 0 || WS - 1 == x || WS - 1 == y || WS - 1 == z {
-                        panic!("Edge cube alive");
+                    if cube.state == State::Alive {
+                        if x == 0
+                            || y == 0
+                            || z == 0
+                            || w == 0
+                            || WS - 1 == x
+                            || WS - 1 == y
+                            || WS - 1 == z
+                            || WS - 1 == w
+                        {
+                            panic!("Edge cube alive");
+                        }
                     }
                 }
             }
@@ -151,7 +170,7 @@ fn main() -> io::Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
 
-    let mut world = [[[Cell { state: State::Dead }; WS]; WS]; WS];
+    let mut world = [[[[Cell { state: State::Dead }; WS]; WS]; WS]; WS];
 
     init_world(&mut world, input.lines());
 
