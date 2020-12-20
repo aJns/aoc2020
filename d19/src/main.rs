@@ -102,7 +102,7 @@ impl BinTree {
 }
 
 fn parse_rule0(rules: &HashMap<usize, String>) -> BinTree {
-    parse_rule(rules, 0)
+    parse_rule(rules, 0, 0, 0)
 }
 
 struct SpecRules {
@@ -187,9 +187,23 @@ fn merge_trees(left: BinTree, right: BinTree) -> BinTree {
     ret
 }
 
-fn parse_rule(rules: &HashMap<usize, String>, index: usize) -> BinTree {
+fn parse_rule(
+    rules: &HashMap<usize, String>,
+    index: usize,
+    prev_i: usize,
+    recur: usize,
+) -> BinTree {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"[ab]").unwrap();
+    }
+    let mut rec = recur;
+    if index == prev_i {
+        rec += 1;
+        println!("recursion: {}", rec);
+    }
+    if rec > 2 {
+        println!("ending recursion");
+        return BinTree::new();
     }
 
     let rule = &rules.get(&index).unwrap();
@@ -221,7 +235,10 @@ fn parse_rule(rules: &HashMap<usize, String>, index: usize) -> BinTree {
 
         let mut branch: Vec<BinTree> = Vec::new();
         for i in indices.iter().rev() {
-            branch.push(parse_rule(rules, *i));
+            let parsed = parse_rule(rules, *i, index, rec);
+            if !parsed.is_leaf() {
+                branch.push(parsed);
+            }
         }
 
         let mut leaf = branch[0].clone();
