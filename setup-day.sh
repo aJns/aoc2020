@@ -12,3 +12,4 @@ fi
 name="$(printf "d%02d" "$1")"
 cargo new --bin "$name"
 mkdir "$name/input"
+cp template.rs "$name/src/main.rs"
