@@ -71,33 +71,14 @@ fn assemble_contain_map(foods: &Vec<Food>) -> ContainMap {
     map
 }
 
-fn count_in_food(foods: &Vec<Food>, ingr: &Ingredient) -> u32 {
-    let mut count = 0;
-    for f in foods {
-        for i in &f.ingr {
-            if i == ingr {
-                count += 1;
-            }
-        }
-    }
-    count
-}
+fn find_diff_map(allergy_map: &AllergyMap) -> ContainMap {
+    let mut outer: ContainMap = HashMap::new();
 
-fn main() -> io::Result<()> {
-    let mut input = String::new();
-    io::stdin().read_to_string(&mut input)?;
-
-    let foods: Vec<Food> = input.lines().map(|x| parse_to_food(x)).collect();
-
-    let a_cont_in = assemble_allergy_map(&foods);
-    let can_contain = assemble_contain_map(&foods);
-    let mut cannot_contain: ContainMap = HashMap::new();
-
-    for (k, val) in a_cont_in {
+    for (k, val) in allergy_map {
         let mut diff_map: HashMap<usize, HashSet<Ingredient>> = HashMap::new();
         for v in val {
             let set = diff_map.entry(v.0).or_insert(HashSet::new());
-            set.insert(v.1);
+            set.insert(v.1.clone());
         }
 
         let mut diff_vec = Vec::new();
@@ -116,27 +97,108 @@ fn main() -> io::Result<()> {
         }
 
         for d in &diff {
-            let i_set = cannot_contain.entry(d.clone()).or_insert(HashSet::new());
+            let i_set = outer.entry(d.clone()).or_insert(HashSet::new());
             i_set.insert(k.clone());
         }
     }
+    outer
+}
+
+fn find_pairs(
+    ingredients: &HashMap<Allergen, HashSet<Ingredient>>,
+) -> HashMap<Allergen, Ingredient> {
+    let mut pairs = HashMap::new();
+    let mut handled = HashSet::new();
+
+    let mut work_map = ingredients.clone();
+    loop {
+        let mut copy = HashMap::new();
+        for (k, val) in &work_map {
+            if val.len() == 1 {
+                for v in val {
+                    pairs.insert(v.clone(), k.clone());
+                    handled.insert(v.clone());
+                }
+            } else {
+                let mut new = HashSet::new();
+                for v in val {
+                    if !handled.contains(v) {
+                        new.insert(v.clone());
+                    }
+                }
+                copy.insert(k.clone(), new);
+            }
+        }
+        if copy.is_empty() {
+            break;
+        }
+        work_map = copy;
+    }
+
+    pairs
+}
+
+fn main() -> io::Result<()> {
+    let mut input = String::new();
+    io::stdin().read_to_string(&mut input)?;
+
+    let foods: Vec<Food> = input.lines().map(|x| parse_to_food(x)).collect();
+
+    let a_cont_in = assemble_allergy_map(&foods);
+    let can_contain = assemble_contain_map(&foods);
+    let cannot_contain = find_diff_map(&a_cont_in);
 
     let mut allergen_free = HashSet::new();
+
+    let mut dangers = HashMap::new();
 
     for (i, a_set) in can_contain {
         if let Some(cant) = cannot_contain.get(&i) {
             let can_really_contain: HashSet<&Allergen> = a_set.difference(&cant).collect();
+            println!("{:<8} ----------", i);
+            for crc in &can_really_contain {
+                println!("{}", crc);
+            }
+            println!("-------------------");
             if can_really_contain.is_empty() {
                 allergen_free.insert(i);
+            } else {
+                let mut crc: HashSet<Allergen> = HashSet::new();
+                for c in can_really_contain {
+                    crc.insert(c.clone());
+                }
+                dangers.insert(i.clone(), crc);
             }
         }
     }
 
-    let count = allergen_free
-        .iter()
-        .fold(0, |acc, x| acc + count_in_food(&foods, &x));
+    for (k, val) in &dangers {
+        println!("{}", k);
+        for v in val {
+            println!("\t{}", v);
+        }
+    }
 
-    writeln!(io::stdout(), "appearances: {}", count)?;
+    let pairs = find_pairs(&dangers);
+
+    let mut allergens = Vec::new();
+    for (a, _) in &pairs {
+        allergens.push(a.clone());
+    }
+    allergens.sort();
+
+    println!("Pairs:");
+    let mut danger = Vec::new();
+    for a in allergens {
+        let i = pairs.get(&a).unwrap();
+        println!("{}: {}", a, i);
+        danger.push(i);
+    }
+
+    for i in danger {
+        write!(io::stdout(), "{},", i)?;
+    }
+    writeln!(io::stdout(), "")?;
 
     Ok(())
 }
