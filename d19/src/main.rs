@@ -7,8 +7,6 @@ use std::io::{self, Read, Write};
 
 use regex::Regex;
 
-type Rule = Vec<String>;
-
 #[derive(Clone)]
 struct BinTree {
     a: Option<Box<BinTree>>,
@@ -18,21 +16,6 @@ struct BinTree {
 impl BinTree {
     fn new() -> Self {
         BinTree { a: None, b: None }
-    }
-
-    fn from_trees(a: Self, b: Self) -> Self {
-        BinTree {
-            a: Some(Box::new(a)),
-            b: Some(Box::new(b)),
-        }
-    }
-
-    fn add_node(&mut self, node: Self, val: char) {
-        match val {
-            'a' => self.a = Some(Box::new(node)),
-            'b' => self.b = Some(Box::new(node)),
-            _ => panic!("invalid val"),
-        }
     }
 
     fn add_leaf(&mut self, leaf: &Self) {
@@ -47,7 +30,7 @@ impl BinTree {
                 self.a = Some(a);
             }
             if let Some(b) = leaf.b.clone() {
-                self.b = Some(b.clone());
+                self.b = Some(b);
             }
         }
     }
@@ -64,81 +47,45 @@ impl BinTree {
         self.b.is_some()
     }
 
-    fn has_only_a(&self) -> bool {
-        self.has_a() && !self.has_b()
-    }
-
-    fn has_only_b(&self) -> bool {
-        !self.has_a() && self.has_b()
-    }
-
-    fn matches(&self, chars: &mut std::str::Chars) -> bool {
+    // returns chars_left, is_leaf(), and last used char
+    fn matches(&self, chars: &mut std::str::Chars) -> (bool, bool, char) {
         if let Some(c) = chars.next() {
             match c {
                 'a' => {
                     if let Some(a) = &self.a {
+                        print!("a");
                         return a.matches(chars);
                     } else {
-                        return false;
+                        (true, self.is_leaf(), c)
                     }
                 }
                 'b' => {
                     if let Some(b) = &self.b {
+                        print!("b");
                         return b.matches(chars);
                     } else {
-                        return false;
+                        (true, self.is_leaf(), c)
                     }
                 }
                 _ => panic!(),
             }
         } else {
-            if self.is_leaf() {
-                true
-            } else {
-                false
-            }
+            println!("\n{}|{}", self.has_a(), self.has_b());
+            (false, self.is_leaf(), ' ')
         }
     }
 }
 
-fn parse_rule0(rules: &HashMap<usize, String>) -> BinTree {
-    parse_rule(rules, 0, 0, 0)
+struct Rule0 {
+    rule31: BinTree,
+    rule42: BinTree,
 }
 
-struct SpecRules {
-    rule31: Rule,
-    rule42: Rule,
-}
+fn parse_rule0(rules: &HashMap<usize, String>) -> Rule0 {
+    let rule31 = parse_rule(rules, 31);
+    let rule42 = parse_rule(rules, 42);
 
-fn add_rule8(rule42: &Rule, n: usize) -> Rule {
-    println!("Adding Rule8...");
-    let mut iterations: Vec<Rule> = vec![vec![String::new()]];
-    for _ in 0..n {
-        let last_iter = iterations.last();
-
-        let mut new_iter: Rule = Vec::new();
-        for last in last_iter {
-            for r in rule42 {
-                for l in last {
-                    let mut new = l.clone();
-                    new.push_str(&r.clone());
-                    new_iter.push(new);
-                }
-            }
-        }
-        iterations.push(new_iter);
-    }
-    let mut rule = Vec::new();
-
-    for mut iter in &mut iterations {
-        rule.append(&mut iter);
-    }
-    println!("Added");
-    rule
-}
-
-fn add_rule11(rule31: &Rule, rule42: &Rule, n: usize) -> Rule {
-    Vec::new()
+    Rule0 { rule31, rule42 }
 }
 
 fn merge_trees(left: BinTree, right: BinTree) -> BinTree {
@@ -187,23 +134,16 @@ fn merge_trees(left: BinTree, right: BinTree) -> BinTree {
     ret
 }
 
-fn parse_rule(
-    rules: &HashMap<usize, String>,
-    index: usize,
-    prev_i: usize,
-    recur: usize,
-) -> BinTree {
+fn parse_rule(rules: &HashMap<usize, String>, index: usize) -> BinTree {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"[ab]").unwrap();
     }
-    let mut rec = recur;
-    if index == prev_i {
-        rec += 1;
-        println!("recursion: {}", rec);
-    }
-    if rec > 2 {
-        println!("ending recursion");
-        return BinTree::new();
+
+    match index {
+        0 => panic!(),
+        8 => panic!(),
+        11 => panic!(),
+        _ => (),
     }
 
     let rule = &rules.get(&index).unwrap();
@@ -235,7 +175,7 @@ fn parse_rule(
 
         let mut branch: Vec<BinTree> = Vec::new();
         for i in indices.iter().rev() {
-            let parsed = parse_rule(rules, *i, index, rec);
+            let parsed = parse_rule(rules, *i);
             if !parsed.is_leaf() {
                 branch.push(parsed);
             }
@@ -264,23 +204,81 @@ fn parse_rule(
     panic!()
 }
 
-fn is_match(rule: &BinTree, msg: &str) -> bool {
-    let mut chars = msg.chars();
+fn is_match(rule: &Rule0, msg: &str) -> bool {
+    let rule31 = &rule.rule31;
+    let rule42 = &rule.rule42;
 
-    rule.matches(&mut chars)
+    let mut work_str = msg.to_string();
+
+    let mut rule42_hits = 0;
+    loop {
+        // returns chars_left, is_leaf(), and last used char
+        let mut chars = work_str.chars();
+        let (chars_left, leaf, last_c) = rule42.matches(&mut chars);
+        if leaf {
+            rule42_hits += 1;
+        }
+
+        if !chars_left {
+            return false;
+        } else {
+            if !leaf {
+                break;
+            }
+        }
+        let mut temp = last_c.to_string();
+        temp.extend(chars);
+        work_str = temp;
+    }
+    let mut rule31_hits = 0;
+    loop {
+        let mut chars = work_str.chars();
+        let (chars_left, leaf, last_c) = rule31.matches(&mut chars);
+        if leaf {
+            rule31_hits += 1;
+        }
+
+        if !chars_left {
+            if leaf {
+                break;
+            } else {
+                return false;
+            }
+        }
+        let mut temp = last_c.to_string();
+        temp.extend(chars);
+        work_str = temp;
+    }
+    if rule31_hits >= 1 && rule31_hits < rule42_hits {
+        return true;
+    }
+    false
 }
 
-fn calc_matches(rule: &BinTree, msgs: &[&str]) -> u64 {
+fn calc_matches(rule: &Rule0, msgs: &[&str]) -> u64 {
     let mut count = 0;
     let mut msg_i = 0;
+
+    let mut vec = Vec::new();
     for msg in msgs {
+        println!("--------");
+        println!("{}", msg);
         if is_match(rule, msg) {
             count += 1;
+            vec.push(msg);
         }
 
         msg_i += 1;
+        println!("");
         println!("{}/{} matches", count, msg_i);
     }
+    println!("--------");
+    println!("Matches:");
+    println!("--------");
+    for v in vec {
+        println!("{}", v);
+    }
+    println!("--------");
 
     count
 }
@@ -294,29 +292,6 @@ fn rules2map(unsorted: &[&str]) -> HashMap<usize, String> {
     }
 
     map
-}
-
-fn vis_tree(tree: &BinTree) {
-    let dep = 0;
-    if let Some(abox) = &tree.a {
-        println!("{}: a", dep);
-        vis_node(&abox, 1);
-    }
-    if let Some(bbox) = &tree.b {
-        println!("{}: b", dep);
-        vis_node(&bbox, 1);
-    }
-}
-
-fn vis_node(tree: &BinTree, dep: usize) {
-    if let Some(abox) = &tree.a {
-        println!("{}: a", dep);
-        vis_node(&abox, dep + 1);
-    }
-    if let Some(bbox) = &tree.b {
-        println!("{}: b", dep);
-        vis_node(&bbox, dep + 1);
-    }
 }
 
 fn main() -> io::Result<()> {
